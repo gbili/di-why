@@ -35,6 +35,14 @@ class DiContainer {
     return this.loading;
   }
 
+  addToLoadDict(injectionDict) {
+    if (this.loading) {
+      throw new Error('Cannot add to load dict when loading');
+    }
+    injectionDict = injectionDict || {};
+    this.loadDict = { ...this.loadDict, ...injectionDict };
+  }
+
   addToLoadingPromisesIfNotAlreadyThere(refName, promise) {
     if (this.loadingPromises.hasOwnProperty(refName)) {
       return false;

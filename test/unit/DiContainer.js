@@ -49,6 +49,11 @@ class Hey {
   }
 }
 
+const injectionDict2 = {
+  'HelloAddedAfterwards': {
+    instance: Hello
+  },
+};
 const injectionDict = {
   'Hello': {
     instance: Hello
@@ -214,6 +219,15 @@ describe(`DiContainer`, function() {
     });
   });
 
+  describe(`di.addToLoadDict()`, function() {
+    it('should be able to add more refs for loading', async function() {
+      const di = new DiContainer({ logger, load: injectionDict });
+      di.addToLoadDict(injectionDict2)
+      expect(di.has('HelloAddedAfterwards')).to.be.equal(false);
+      await di.loadAll();
+      expect(di.has('HelloAddedAfterwards')).to.be.equal(true);
+    });
+  });
 
   describe(`di.loadAll()`, function() {
     it('should be able to load :instance', async function() {
