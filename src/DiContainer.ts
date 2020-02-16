@@ -1,8 +1,62 @@
-let _diContainers = [];
-let _logger = { debug(){}, };
+export interface LoggerInterface {
+  debug: (...params: any[]) => any;
+}
+export interface InjectableInterface {
+  inject: (...args: any[]) => any;
+}
+
+export type SubscriberCallbackParams = {
+  serviceLocator: DiContainer;
+  params: any[];
+}
+
+export type SubscriptionsDict = {
+  [k: string]: (param: SubscriberCallbackParams) => any;
+}
+
+export type LoadDictElement = {
+  constructible?: new(...args: any[]) => any;
+  instance?: any;
+  injectable?: InjectableInterface; 
+  deps?: DependenciesDict,
+  destructureDeps?: boolean;
+  locateDeps?: LocatableNestedDependenciesDict,
+  after?: (...args: any[]) => any;
+  before?: (props: { deps: DependenciesDict, serviceLocator: DiContainer, el: LoadDictElement, }) => Promise<any> 
+  factory?: (...args: any[]) => any;
+  subscriptions?: SubscriptionsDict;
+}
+
+export type LoadDict = {
+  [k: string]: LoadDictElement;
+}
+
+export type LoadPromisesDict = {
+  [k: string]: Promise<any>;
+}
+
+export type ServiceLocatorDict = {
+  [k: string]: any;
+}
+
+export type DependenciesDict = ServiceLocatorDict;
+
+export type LocatableNestedDependenciesDict = {
+  [k: string]: string | LocatableNestedDependenciesDict;
+}
+
+let _diContainers: DiContainer[] = [];
+let _logger: LoggerInterface = { debug: () => undefined };
+
 class DiContainer {
 
-  constructor({ logger, load }) {
+  public logger: LoggerInterface;
+  public locatorRefDict: ServiceLocatorDict;
+  public loadDict: LoadDict;
+  public loading: boolean;
+  public loadPromises: LoadPromisesDict;
+
+  constructor({ logger, load }: { logger?: LoggerInterface, load?: LoadDict}) {
     this.logger = logger || _logger;
     this.locatorRefDict = {};
     this.loadDict = load || {};
@@ -11,7 +65,7 @@ class DiContainer {
     _diContainers.push(this);
   }
 
-  async loadAll(injectionDict) {
+  async loadAll(injectionDict?: LoadDict) {
     if (this.loading) {
       if (!injectionDict) {
         return this.loading;
@@ -35,7 +89,7 @@ class DiContainer {
     return this.loading;
   }
 
-  addToLoadDict(injectionDict) {
+  addToLoadDict(injectionDict: LoadDict) {
     if (this.loading) {
       throw new Error('Cannot add to load dict when loading');
     }
@@ -43,17 +97,17 @@ class DiContainer {
     this.loadDict = { ...this.loadDict, ...injectionDict };
   }
 
-  addToLoadingPromisesIfNotAlreadyThere(refName, promise) {
-    if (this.loadingPromises.hasOwnProperty(refName)) {
+  addToLoadingPromisesIfNotAlreadyThere(refName: string, promise: Promise<any>) {
+    if (this.loadPromises.hasOwnProperty(refName)) {
       return false;
     }
-    this.loadingPromises[refName] = promise;
+    this.loadPromises[refName] = promise;
     return true;
   }
 
-  async deepLocateDeps(locateDeps) {
+  async deepLocateDeps(locateDeps: LocatableNestedDependenciesDict) {
     this.logger.debug(`+++++++DiContainer:deepLocateDeps(locateDeps):locateDeps begin: `, locateDeps);
-    const deps = (Array.isArray() && []) || {};
+    const deps: { [k in keyof LocatableNestedDependenciesDict]: any; } = (Array.isArray(locateDeps) && []) || {};
     for (let key in locateDeps) {
       const depNameOrNested = locateDeps[key];
       this.logger.debug(`DiContainer:deepLocateDeps(locateDeps): inside for key: `, key, ' depNameOrNested : ', depNameOrNested);
@@ -75,7 +129,7 @@ class DiContainer {
     return deps;
   }
 
-  mergeObjects(a, b) {
+  mergeObjects(a: any, b: any) {
     if (Array.isArray(a) || Array.isArray(b)
       || (typeof a === 'string' || typeof b === 'string')
       || (typeof a === 'function' || typeof b === 'function')
@@ -84,7 +138,7 @@ class DiContainer {
     }
     const bCopy = {...b}
     const keysIntersection = [];
-    const bComplement = {};
+    const bComplement: { [k in keyof typeof a]: any } = {};
     for (let key in a) {
       if (b.hasOwnProperty(key)) {
         keysIntersection.push(key);
@@ -102,14 +156,14 @@ class DiContainer {
     return merged;
   }
 
-  async load(refName) {
+  async load(refName: string) {
     this.logger.debug('DiContainer:Loading: ', refName);
     if (this.has(refName)) {
       this.logger.debug('DiContainer:Already loaded: ', refName);
       return this.get(refName);
     }
     if (!this.loadDict.hasOwnProperty(refName)) {
-      throw new Error('DiContainer:load() attempting to load inexistent ref', refName);
+      throw new Error(`DiContainer:load() attempting to load inexistent ref ${refName}`);
     }
     const el = this.loadDict[refName];
     let me = null;
@@ -117,11 +171,12 @@ class DiContainer {
     let { destructureDeps } = el;
     let locateDeps = null;
     let providedDeps = null;
-    if (el.hasOwnProperty('deps')) {
+
+    if (el.deps) {
       providedDeps = el.deps;
       destructureDeps = destructureDeps || Array.isArray(providedDeps);
     }
-    if (el.hasOwnProperty('locateDeps')) {
+    if (el.locateDeps) {
       locateDeps = await this.deepLocateDeps(el.locateDeps);
       destructureDeps = destructureDeps || Array.isArray(locateDeps);
     }
@@ -141,7 +196,7 @@ class DiContainer {
       deps = this.mergeObjects((locateDeps || {}), (providedDeps || {}));
     }
 
-    if (el.hasOwnProperty('before')) {
+    if (el.before) {
       let ret = null;
       try {
         ret = await el.before({ deps, serviceLocator: this, el, });
@@ -152,11 +207,11 @@ class DiContainer {
       if (ret !== undefined) {
         deps = ret;
       } else {
-        this.logger.debug(`DiContainer:load(${refName}):before your .before() is returning undefined as deps is it on purpose?`, err);
+        this.logger.debug(`DiContainer:load(${refName}):before your .before() is returning undefined as deps is it on purpose?`);
       }
     }
 
-    if (el.hasOwnProperty('injectable')) {
+    if (el.injectable) {
       this.logger.debug(`DiContainer:load(${refName}):inject injectable deps`, deps);
       try {
         await el.injectable.inject(deps)
@@ -167,7 +222,7 @@ class DiContainer {
       me = el.injectable;
     }
 
-    if (el.hasOwnProperty('constructible')) {
+    if (el.constructible) {
       this.logger.debug(`DiContainer:load(${refName}):inject constructible deps`, deps);
       if (destructureDeps) {
         this.logger.debug(`DiContainer:load(${refName}):inject constructible destructureDeps`, deps);
@@ -182,7 +237,7 @@ class DiContainer {
       this.logger.debug(`DiContainer:load(${refName}):inject constructible deps`, deps, me);
     }
 
-    if (el.hasOwnProperty('factory')) {
+    if (el.factory) {
       this.logger.debug(`DiContainer:load(${refName}):inject factory deps`, deps);
       if (destructureDeps) {
         this.logger.debug(`DiContainer:load(${refName}):inject factory destructureDeps`, deps);
@@ -197,11 +252,11 @@ class DiContainer {
       this.logger.debug(`DiContainer:load(${refName}):inject factory deps`, deps, me);
     }
 
-    if (el.hasOwnProperty('instance')) {
+    if (el.instance) {
       me = el.instance;
     }
 
-    if (el.hasOwnProperty('after')) {
+    if (el.after) {
       let ret;
       try {
         ret = await el.after({ me, serviceLocator: this, el, deps });
@@ -217,7 +272,7 @@ class DiContainer {
     return this.set(refName, me);
   }
 
-  async get(refName) {
+  async get(refName: string) {
     this.isValidRefNameOrThrow(refName);
     if (!this.has(refName)) {
       try {
@@ -230,7 +285,7 @@ class DiContainer {
     return this.locatorRefDict[refName];
   }
 
-  getLoadPromise(refName) {
+  getLoadPromise(refName: string) {
     if (!this.loadDict.hasOwnProperty(refName)) {
       throw new Error(`Trying to access inexistent ref: ${refName} available refs are: ${Object.keys(this.locatorRefDict).join('\n')}`);
     }
@@ -243,7 +298,7 @@ class DiContainer {
     return this.loadPromises[refName];
   }
 
-  set(refName, val) {
+  set(refName: string, val: any) {
     this.isValidRefNameOrThrow(refName);
     if (this.has(refName)) {
       this.logger.debug('Replacing existent ref: ', refName);
@@ -252,29 +307,29 @@ class DiContainer {
     return val;
   }
 
-  has(refName) {
+  has(refName: string) {
     this.isValidRefNameOrThrow(refName);
     this.logger.debug('DiContainer:has(', refName, ')', Object.keys(this.locatorRefDict));
     return this.locatorRefDict.hasOwnProperty(refName);
   }
 
-  isValidRefNameOrThrow(refName) {
+  isValidRefNameOrThrow(refName: string) {
     if (typeof refName !== 'string') {
-      throw new Error('Can only reference locatables by strings: ', refName);
+      throw new Error(`Can only reference locatables by strings: ${refName}`);
     }
   }
 
-  async emit(eventName, ...params) {
-    let listener = null;
+  async emit(eventName: string, ...params: any[]) {
     for (let refName in this.loadDict) {
-      listener = this.loadDict[refName];
-      if (!listener.hasOwnProperty(eventName)) continue;
-      if (typeof listener[eventName] !== 'function') {
+      const listener: { [k in keyof LoadDictElement ]: any } = this.loadDict[refName];
+      if (!listener.subscriptions || !listener.subscriptions[eventName]) continue;
+      const subscriberCallback = listener.subscriptions[eventName];
+      if (typeof subscriberCallback !== 'function') {
         throw new Error(`Listener with ref: ${refName} of event ${eventName}, must have a callable ${eventName} function as prop`);
       }
       this.logger.debug('emitting :', eventName, 'on ref:', refName);
       try {
-        await listener[eventName]({ serviceLocator: this, params});
+        await subscriberCallback({ serviceLocator: this, params});
       } catch (err) {
         this.logger.debug(`DiContainer:emit('${eventName}'):call:error on ${refName}`, err, listener);
         throw err;
@@ -282,7 +337,7 @@ class DiContainer {
     }
   }
 
-  static inject({ logger }) {
+  static inject({ logger }: { logger: LoggerInterface }) {
     _logger = logger;
   }
 
@@ -294,7 +349,7 @@ class DiContainer {
     return DiContainer.getNthContainer(1);
   }
 
-  static getNthContainer(n) {
+  static getNthContainer(n: number) {
     if (!(n > 0 && (_diContainers.length >= n))) {
       throw new Error('Out of range');
     }

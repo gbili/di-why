@@ -2,20 +2,17 @@
   "name": "di-why",
   "version": "v0.14.2",
   "description": "A diy Dependency Injection Container and service locator",
-  "main": "build/index.js",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
   "scripts": {
-    "clean": "rm -fr ./build/*",
-    "prebuild": "npm run clean",
-    "build": "babel -d ./build ./src",
     "coverage:generate": "nyc npm run test",
     "coverage:check": "nyc check-coverage --lines 70 --branches 70 --statements 70 --functions 70",
     "coverage:report": "nyc report --reporter=text-lcov > coverage.lcov",
     "coverage:report:upload": "CODECOV_TOKEN=\"$(grep \"CODECOV_TOKEN=\" .env | cut -d'=' -f2)\" codecov",
     "coverage": "npm run coverage:generate && npm run coverage:check && npm run coverage:report && npm run coverage:report:upload",
-    "test": "mocha --require @babel/register --recursive",
-    "develop": "nodemon --exec babel-node ./src/index.js",
-    "serve": "NODE_ENV=production node ./build/index.js",
-    "semantic-release": "semantic-release"
+    "test": "mocha --recursive ./build/test",
+    "develop": "nodemon ./build/src/index.js",
+    "serve": "NODE_ENV=production node ./build/src/index.js"
   },
   "config": {
     "ghooks": {
@@ -43,22 +40,19 @@
   },
   "homepage": "https://github.com/gbili/di-why#readme",
   "devDependencies": {
-    "@babel/cli": "7.4.4",
-    "@babel/core": "7.4.5",
-    "@babel/node": "7.4.5",
-    "@babel/preset-env": "7.4.5",
-    "@babel/register": "7.4.4",
+    "@types/chai": "4.2.9",
+    "@types/chai-as-promised": "7.1.2",
+    "@types/mocha": "7.0.1",
     "chai": "4.2.0",
     "chai-as-promised": "^7.1.1",
     "codecov": "^3.5.0",
     "dotenv": "^8.0.0",
     "ghooks": "^2.0.4",
-    "marked": "^0.6.3",
+    "marked": "0.8.0",
     "mocha": "6.1.4",
     "nodemon": "1.19.1",
     "nyc": "^14.1.1",
-    "saylo": "^0.2.1",
-    "semantic-release": "^15.13.19"
+    "saylo": "^0.3.0"
   },
   "dependencies": {
     "mysql": "^2.17.1"
