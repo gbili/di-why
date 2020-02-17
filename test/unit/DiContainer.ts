@@ -3,7 +3,7 @@ import chai from 'chai';
 import { expect } from 'chai';
 import logger from 'saylo';
 import chaiAsPromised from 'chai-as-promised';
-import DiContainer, { LoadDict, LoggerInterface } from '../../src/DiContainer';
+import DiContainer, { LoadDict, LoggerInterface, AfterCallbackProps, GetInstanceType, BeforeCallbackProps } from '../../src/DiContainer';
 
 chai.use(chaiAsPromised);
 logger.turnOn('debug');
@@ -61,7 +61,7 @@ const injectionDict: LoadDict = {
   },
   'data': {
     instance: data,
-    after: async ({me, serviceLocator, el}) => {
+    after: async ({ me }: AfterCallbackProps<typeof data>) => {
       await stall(200);
       afterWasExecuted = true;
     },
@@ -87,7 +87,7 @@ const injectionDict: LoadDict = {
   },
   'HelloBefore': {
     constructible: Hello,
-    before: async ({ deps, serviceLocator }) => {
+    before: async ({ deps, serviceLocator }: BeforeCallbackProps<GetInstanceType<typeof Hello>>) => {
       const someDepNeedsToBePlacedInSpecialPlace = await serviceLocator.get('HelloObjDestructurableParams');
       if (typeof deps.data3Values === 'undefined') {
         throw new Error('Deps have not been injected properly');
@@ -142,7 +142,7 @@ const injectionDict: LoadDict = {
   },
   'logger': {
     instance: logger,
-    after: async ({me, serviceLocator, el}) => {
+    after: async ({ serviceLocator }: AfterCallbackProps<typeof logger>) => {
       const data = await serviceLocator.get('data');
       serviceLocator.set('emptyObject', data);
     },
@@ -150,14 +150,14 @@ const injectionDict: LoadDict = {
   'HelloStaticInjectable': {
     injectable: Hello,
     deps: data,
-    after: ({ me }) => {
+    after: ({ me }: AfterCallbackProps<typeof Hello>) => {
       me.getInjection().d = 'd';
     },
   },
   'HelloConstructible': {
     constructible: Hello,
     deps: data,
-    after: ({ me }) => {
+    after: ({ me }: AfterCallbackProps<GetInstanceType<typeof Hello>>) => {
       me.injection.e = 'e';
     },
   },
@@ -254,7 +254,7 @@ describe(`DiContainer`, function() {
       const injDict: LoadDict = {
         'WillBeReplaced': {
           instance: 'ThisValueWillBeReplaced',
-          after({me, serviceLocator}) {
+          after({me, serviceLocator}: AfterCallbackProps<'ThisValueWillBeReplaced'>) {
             return 'ReplacedByThis';
           },
         },

@@ -14,21 +14,26 @@ export type SubscriptionsDict = {
   [k: string]: (param: SubscriberCallbackParams) => any;
 }
 
-export type LoadDictElement = {
-  constructible?: new(...args: any[]) => any;
-  instance?: any;
-  injectable?: InjectableInterface; 
+export type GetInstanceType<C> = C extends new(...args: any[]) => infer T ? T : never;
+export type GetInjectableSubclass<T> = T extends InjectableInterface ? T : never;
+export type AfterCallbackProps<T> = { me: T, serviceLocator: DiContainer, el: LoadDictElement<T>, deps: DependenciesDict };
+export type BeforeCallbackProps<T> = { serviceLocator: DiContainer, el: LoadDictElement<T>, deps: DependenciesDict };
+
+export type LoadDictElement<T = any> = {
+  constructible?: new(...args: any[]) => T;
+  instance?: T;
+  injectable?: GetInjectableSubclass<T>; 
   deps?: DependenciesDict,
   destructureDeps?: boolean;
   locateDeps?: LocatableNestedDependenciesDict,
-  after?: (...args: any[]) => any;
-  before?: (props: { deps: DependenciesDict, serviceLocator: DiContainer, el: LoadDictElement, }) => Promise<any> 
-  factory?: (...args: any[]) => any;
+  after?: (props: AfterCallbackProps<T>) => (T | Promise<T> | void);
+  before?: (props: BeforeCallbackProps<T>) => Promise<DependenciesDict | undefined> 
+  factory?: (...args: any[]) => T;
   subscriptions?: SubscriptionsDict;
 }
 
 export type LoadDict = {
-  [k: string]: LoadDictElement;
+  [P: string]: LoadDictElement
 }
 
 export type LoadPromisesDict = {
@@ -199,7 +204,7 @@ class DiContainer {
     if (el.before) {
       let ret = null;
       try {
-        ret = await el.before({ deps, serviceLocator: this, el, });
+        ret = await el.before({ serviceLocator: this, el, deps });
       } catch (err) {
         this.logger.debug(`DiContainer:load(${refName}):before error occured in .before()`, err);
         throw err;
