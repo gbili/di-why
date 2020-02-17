@@ -26,8 +26,8 @@ export type LoadDictElement<T = any> = {
   deps?: DependenciesDict,
   destructureDeps?: boolean;
   locateDeps?: LocatableNestedDependenciesDict,
-  after?: (props: AfterCallbackProps<T>) => (T | Promise<T> | void);
-  before?: (props: BeforeCallbackProps<T>) => Promise<DependenciesDict | undefined> 
+  after?: (props: AfterCallbackProps<T>) => (T | void | Promise<T | void>);
+  before?: (props: BeforeCallbackProps<T>) => (DependenciesDict | void | Promise<DependenciesDict | void>);
   factory?: (...args: any[]) => T;
   subscriptions?: SubscriptionsDict;
 }
