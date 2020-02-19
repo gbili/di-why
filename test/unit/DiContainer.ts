@@ -1,9 +1,9 @@
 import 'dotenv/config';
 import chai from 'chai';
 import { expect } from 'chai';
-import logger from 'saylo';
+import { logger } from 'saylo';
 import chaiAsPromised from 'chai-as-promised';
-import DiContainer, { LoadDict, LoggerInterface, AfterCallbackProps, GetInstanceType, BeforeCallbackProps } from '../../src/DiContainer';
+import DiContainer, { LoadDict, AfterCallbackProps, GetInstanceType, BeforeCallbackProps } from '../../src/DiContainer';
 
 chai.use(chaiAsPromised);
 logger.turnOn('debug');
@@ -176,16 +176,16 @@ describe(`DiContainer`, function() {
 
   describe(`DiContainer.getNthContainer(1)`, function() {
     it('should return an instance of DiContainer set at bootstrap', function() {
-      const a = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
-      new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
-      new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const a = new DiContainer({ logger, load: injectionDict });
+      new DiContainer({ logger, load: injectionDict });
+      new DiContainer({ logger, load: injectionDict });
       expect(DiContainer.getNthContainer(1)).to.be.equal(DiContainer.getFirstContainer()).and.to.be.equal(a);
     });
   });
 
   describe(`DiContainer.getLatestContainer()`, function() {
     it('should return an instance of DiContainer set at bootstrap', function() {
-      const d = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const d = new DiContainer({ logger, load: injectionDict });
       expect(DiContainer.getLatestContainer())
         .to.be.an.instanceof(DiContainer)
         .and.be.equal(d);
@@ -194,7 +194,7 @@ describe(`DiContainer`, function() {
 
   describe(`DiContainer.mergeObjects(a, b)`, function() {
     it('should return an object with both merged (no collision)', function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface });
+      const di = new DiContainer({ logger });
       const o1 = {
         a1: {
           a2a: '-a2a'
@@ -225,7 +225,7 @@ describe(`DiContainer`, function() {
 
   describe(`di.addToLoadDict()`, function() {
     it('should be able to add more refs for loading', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       di.addToLoadDict(injectionDict2)
       expect(di.has('HelloAddedAfterwards')).to.be.equal(false);
       await di.loadAll();
@@ -235,7 +235,7 @@ describe(`DiContainer`, function() {
 
   describe(`di.loadAll()`, function() {
     it('should be able to load :instance', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('Hello')).to.be.equal(false);
       await di.loadAll();
       expect(di.has('Hello')).to.be.equal(true);
@@ -243,7 +243,7 @@ describe(`DiContainer`, function() {
 
     it('should be able to load :instance and execute after', async function() {
       afterWasExecuted = false;
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('data')).to.be.equal(false);
       await di.loadAll();
       expect(di.has('data')).to.be.equal(true);
@@ -259,14 +259,14 @@ describe(`DiContainer`, function() {
           },
         },
       };
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injDict });
+      const di = new DiContainer({ logger, load: injDict });
       await di.loadAll();
       expect(di.has('WillBeReplaced')).to.be.equal(true);
       expect(await di.get('WillBeReplaced')).to.be.equal('ReplacedByThis');
     });
 
     it('should be able to load :instance and give access to serviceLocator in after callback', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('emptyObject')).to.be.equal(false);
       await di.loadAll();
       const eo = await di.get('emptyObject');
@@ -274,7 +274,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :injectable', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('HelloStaticInjectable')).to.be.equal(false);
       await di.loadAll();
       expect(di.has('HelloStaticInjectable')).to.be.equal(true);
@@ -282,7 +282,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :constructible', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('HelloConstructible')).to.be.equal(false);
       await di.loadAll();
       expect(di.has('HelloConstructible')).to.be.equal(true);
@@ -291,7 +291,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :constructible with destructurable params', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('HelloObjDestructurableParams')).to.be.equal(false);
       await di.loadAll();
       expect(di.has('HelloObjDestructurableParams')).to.be.equal(true);
@@ -301,7 +301,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :constructible with locateDeps and deps which have common deep nested properties', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const aaa = await di.get('HelloNestedLocateDepsColliding');
       const dep = await di.get('HelloObjDestructurableParams');
@@ -313,7 +313,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :constructible with locateDeps and deps which have common deep nested properties', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const aaa = await di.get('HelloNestedLocateDepsNoCollide');
       const dep = await di.get('HelloObjDestructurableParams');
@@ -328,7 +328,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :constructible with locateDeps and deps which different deep nested properties', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const aaa = await di.get('HelloNestedLocateDepsDifferentLocateAndDepsKeys');
       const dep = await di.get('HelloObjDestructurableParams');
@@ -345,7 +345,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to load :factory with locateDeps and deps which have common deep nested properties', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const aaa = await di.get('HelloFactoryNestedLocateDepsColliding');
       const dep = await di.get('HelloObjDestructurableParams');
@@ -357,7 +357,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to run before() and alter the deps passed in constructor', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const aaa = await di.get('HelloBefore');
       expect(typeof aaa.injection).to.not.be.equal('undefined');
@@ -365,7 +365,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should return true on subsequent calls to loadAll()', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.loadAll()).to.eventually.be.equal(false);
       expect(di.loadAll()).to.eventually.be.equal(true);
       expect(di.loadAll()).to.eventually.be.equal(true);
@@ -377,7 +377,7 @@ describe(`DiContainer`, function() {
   describe(`di.get()`, function() {
     it('should be able to get an async loaded entry', async function() {
       afterWasExecuted = false;
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('data')).to.be.equal(false);
       await di.loadAll();
       expect(await di.get('data')).to.be.equal(data);
@@ -388,7 +388,7 @@ describe(`DiContainer`, function() {
 
   describe(`di.set()`, function() {
     it('should be able to set a non existent entry', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       expect(di.has('data')).to.be.equal(false);
       const key = 'nonExistent';
       const value = 'nonExistentValue';
@@ -397,7 +397,7 @@ describe(`DiContainer`, function() {
     });
 
     it('should be able to set an existent entry', async function() {
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const key = 'data';
       expect(di.has(key)).to.be.equal(true);
@@ -422,7 +422,7 @@ describe(`DiContainer`, function() {
           },
         },
       }
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       const param1 = { hey: 'hoy' };
       const param2 = { hey2: 'hoy2' };
       await di.emit('onHoyEvent', param1, param2);
@@ -443,7 +443,7 @@ describe(`DiContainer`, function() {
           },
         },
       }
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       const param1 = { hey: 'hole' };
       const param2 = { hey2: 'hola' };
       await di.emit('some:other:event', param1, param2);
@@ -460,7 +460,7 @@ describe(`DiContainer`, function() {
           onHoyEvent: 'hey'
         },
       }
-      const di = new DiContainer({ logger: logger as unknown as LoggerInterface, load: injectionDict });
+      const di = new DiContainer({ logger, load: injectionDict });
       const param1 = { hey: 'hoy' };
       const param2 = { hey2: 'hoy2' };
       expect(di.emit('onHoyEvent', param1, param2)).to.eventually.throw();
