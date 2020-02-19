@@ -282,7 +282,7 @@ class DiContainer {
     return this.set(refName, me);
   }
 
-  async get(refName: string) {
+  async get<T = any>(refName: string): Promise<T> {
     this.isValidRefNameOrThrow(refName);
     if (!this.has(refName)) {
       try {
