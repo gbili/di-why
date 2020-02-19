@@ -182,8 +182,13 @@ class DiContainer {
       destructureDeps = destructureDeps || Array.isArray(providedDeps);
     }
     if (el.locateDeps) {
-      locateDeps = await this.deepLocateDeps(el.locateDeps);
-      destructureDeps = destructureDeps || Array.isArray(locateDeps);
+      try {
+        locateDeps = await this.deepLocateDeps(el.locateDeps);
+        destructureDeps = destructureDeps || Array.isArray(locateDeps);
+      } catch (err) {
+        this.logger.debug(`DiContainer:load(${refName}):locateDeps error occured in .deepLocateDeps()`, err, "\n LocateDeps: ", el.locateDeps);
+        throw err;
+      }
     }
     let deps = null;
     if (destructureDeps) {
