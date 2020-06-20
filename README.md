@@ -1,56 +1,132 @@
-# Nomonichas
-![code coverage](https://img.shields.io/codecov/c/github/gbili/mysql-oh-wait.svg)
-![version](https://img.shields.io/npm/v/mysql-oh-wait.svg)
-![downloads](https://img.shields.io/npm/dm/mysql-oh-wait.svg)
-![license](https://img.shields.io/npm/l/mysql-oh-wait.svg)
+# Di Why
 
-# Mysql Oh Wait! (Mysql await)
-Uses the great node `mysqljs/mysql` package and wraps around it to facilitate getting results as a return from `MysqlReq.query()`. Instead of needing to use callbacks, this package uses `Promises` and the `async / await` syntax which is much easier.
-On top of that the advantage (if you need this feature of course) is that you don't need to worry about `connections` not being closed or open at the moment of querying.
+Dependency injection do it yourself style, but why?
 
-## Installation
-To install this npm package do
+Don't ever bother about dependencies anymore. Which file should I import first? Leave these kind of questions to this very simple yet powerful Dependency Injection solution.
 
-```
-npm i -P mysql-oh-wait
-```
+The idea is very simple:
 
-## Usage
-### MysqlReq
-Then from your javascript files import either `MysqlReq` or `MysqlDump` with
-```javascript
-//var MysqlReq = require('mysql-oh-wait').MysqlReq;
-import { MysqlReq } from 'mysql-oh-wait';
-```
+> We import all dependencies in a central location (it could be imported using fs, but we do it manually here). Once all these dependencies are added to a `loadDict`, anytime one dependant needs to load some dependency, it will ask for the dependency injection container (`DiContainer`) to get it. This way we avoid cyclical dependency issues etc.
 
-Then you can directly query your database:
-```javascript
-//import 'dotenv/config'; // this will get connection settings from .env file
+How does the `DiContainer` know which dependencies to fetch you may ask? Because you specify the dependencies in a injection dictionary. Each entry in the dictionary will be stored with _handle_ (the dictionary's keys) by which dependants are to refer to the dependencies.
 
-import { MysqlReq, MysqlDump } from 'mysql-oh-wait';
+Here is an example injection dictionary element `LoadDictElement` (a single entry in the dictionary) let's store this in `./loaders/blogPostsDir.ts`:
 
-const res = await MysqlReq.query({sql: 'SELECT * FROM MyTable WHERE ?', values: {myCol: 'myValue'}});
-console.log(res); // [ { myCol: 'myValue', ...otherColumns }, { myCol: 'myValue', ...otherColumns2 }, ...otherRows ]
+```ts
+import { LoadDictElement } from 'di-why/build/src/DiContainer';
+
+type FactoryProps = {
+  userOrDefaultDir: UserOrDefaultDirFunction;
+};
+
+const loadDictElement: LoadDictElement<Promise<string>> = {
+  factory: async function ({ userOrDefaultDir }: FactoryProps) {
+    return await userOrDefaultDir('MTB_MD_BLOG_POSTS_DIR', 'content');
+  },
+  locateDeps: {
+    userOrDefaultDir: 'userOrDefaultDir',
+  },
+};
+export default loadDictElement;
 ```
 
-This is assuming you have set the connection details in environement variables like:
-```
-process.env.DB_HOST = 'myhost'
-process.env.DB_USER = 'myuser'
-process.env.DB_PASSWORD = 'mypwd'
-process.env.DB_NAME = 'mydbname'
-```
-Or you can store these in a `.env` file. In which case the `import 'dotenv/config';` statement will load them for you. (You need to `npm i -P dotenv` for this to work.
+Let's see what happens above:
 
-### MysqlDump
-If you want to create the database tables from an sql file you can use `MysqlDump`
-```javascript
-//var MysqlDump = require('mysql-oh-wait').MysqlDump;
-import { MysqlDump } from 'mysql-oh-wait';
+1. we import the Typescript type for the LoadDictElement, which guides us on the allowed keys
+2. we create an object with a `factory` and `locateDeps` entries:
+   - `factory` should be a callable, that will receive `locateDeps` object as input but instead of the values being the dependencies handles, they will be replaced by the actual dependency. This way dependencies can be used within the `factory` function to pass it to which ever new dependant we are creating. 
+   - `locateDeps` are a list of `key: 'dependency_handle'` pairs that the `DiContainer` will have to resolve and find the actual dependencies. Once the di container has resolved those dependencies with their actual value, it will pass an object of dependencies to the dependant (by keeping the key names of the `locateDeps` object).
+3. we export the `loadDictElement` to later add it to the `DiContainer` load dictionary (by importing it).
+
+**Note**: how the `factory` can return a Promise.
+**Note**: how the `factory` uses the same keys in the props object as the `locateDeps` object keys.
+
+See how it depends on `userOrDefaultDir` in order to operate? We could have `import userOrDefaultDir from './userOrDefaultDir'` but since it is a dependency of many dependants, we decide to import it once and for all in a separate `loadDictElement` and then let `DiContainer` find it for us, anytime we want to use it. So here is `./loaders/userOrDefaultDir.ts`:
+
+```ts
+import 'dotenv/config';
+import { LoadDictElement } from 'di-why/build/src/DiContainer';
+import promiseFs from '../utils/promiseFs';
+
+type FactoryProps = {
+  MTB_USER_PROJECT_ROOT_DIR: string;
+  MTB_ENV: string;
+  MTB_ROOT_DIR: string;
+  logger: { log: (...args: any[]) => any; };
+};
+
+const loadDictElement: LoadDictElement<UserOrDefaultDirFunction> = {
+  factory: function ({ MTB_USER_PROJECT_ROOT_DIR, MTB_ENV, MTB_ROOT_DIR, logger }: FactoryProps) {
+    return async function (envVarName: DirEnvVarNames, dirname: ContentDirNames) {
+      const userXDir = process.env[envVarName]
+        || `${MTB_USER_PROJECT_ROOT_DIR}/${dirname}`;
+
+      const existsUserDir = await promiseFs.existsDir(userXDir);
+      if (!existsUserDir) {
+        if (MTB_ENV === 'clone') {
+          throw new Error(`You must create a ./${dirname} dir at the root of your project after cloning repo`);
+        }
+        logger.log(`Using module's own ${dirname} dir`);
+        const moduleStaticDir = `${MTB_ROOT_DIR}/${dirname}`;
+        return moduleStaticDir;
+      }
+      return userXDir;
+    };
+  },
+  locateDeps: {
+    MTB_ENV: 'MTB_ENV',
+    MTB_USER_PROJECT_ROOT_DIR: 'MTB_USER_PROJECT_ROOT_DIR',
+    MTB_ROOT_DIR: 'MTB_ROOT_DIR',
+    logger: 'logger',
+  },
+};
+export default loadDictElement;
 ```
-Then if you have an mysqldump file somewhere you can simply do:
-```javascript
-import { MysqlDump } from 'mysql-oh-wait';
-await MysqlDump.executeSqlFile(`${__dirname}/mysqldump.sql`);
+
+This time (above) we are still using a factory, with many dependencies. And `DiContainer` will locate those for us and inject them in the `factory` function for us. What is important to note here is that we export a `loadDictElement` again.
+
+## Adding entries to the load dictionary
+
+Now comes the important question: how do we pass all these `loadDictElement`s to the `DiContainer`? Through a central file where we import all these loaders. We can for example place it in `./loaders/index.ts`:
+
+Let's create an example `DiContainer` by passing in a set of `LoadDictElements` with their respective handles.
+
+```ts
+import 'dotenv/config';
+
+import DiContainer from 'di-why';
+
+import MTB_ENV from './MTB_ENV';
+import MTB_MD_BLOG_POSTS_DIR from './MTB_MD_BLOG_POSTS_DIR';
+import MTB_ROOT_DIR from './MTB_ROOT_DIR';
+import MTB_USER_PROJECT_ROOT_DIR from './MTB_USER_PROJECT_ROOT_DIR';
+import loggerDict, { logger } from './logger';
+import userOrDefaultDir from './userOrDefaultDir';
+
+const injectionDict = {
+  MTB_ENV,
+  MTB_MD_BLOG_POSTS_DIR,
+  MTB_ROOT_DIR,
+  MTB_USER_PROJECT_ROOT_DIR,
+  loggerDict,
+  userOrDefaultDir,
+};
+
+const di = new DiContainer({ logger, load: injectionDict });
+
+export default di;
 ```
-This should have loaded all your tables in the database. Again, assuming you have database connection config in `process.env.DB_...` properties.
+
+The important parts here are:
+
+1. Importing the `DiContainer`
+2. Importing all `loadDictElements` and give them the name of the handle we have used to reference them in the `locateDeps` object.
+3. Create the `injectionDict` using the handles as keys and whose values are the `LoadDictElements`
+4. Create the `DiContainer` object and specify what it should `load` by passing in the `injectionDict`.
+5. Note a `logger` is needed as constructor param. This will let you control how much the `DiContainer` should blab. The logger has to have two methods: `log` and `debug`.
+
+That's basically it!
+
+See the DiContainer `loadAll` method to see which entries you can add to `loadDictElement`: `constructible`, `instance`, `factory`, `before`, `after`, `injectable`.
+
+You can also access the `serviceLocator` within those.
