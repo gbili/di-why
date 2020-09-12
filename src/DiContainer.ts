@@ -47,7 +47,13 @@ export type ServiceLocatorDict = {
 export type DependenciesDict = ServiceLocatorDict;
 
 export type LocatableNestedDependenciesDict = {
-  [k: string]: string | LocatableNestedDependenciesDict;
+  [k: string]: string | LocatableNestedSubDependenciesDict;
+};
+
+export type LocatableNestedSubDependenciesDict = {
+  [k: string]: string | LocatableNestedSubDependenciesDict;
+} | {
+  [i: number]: string | LocatableNestedSubDependenciesDict;
 }
 
 let _diContainers: DiContainer[] = [];

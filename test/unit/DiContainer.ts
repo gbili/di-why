@@ -137,6 +137,15 @@ const injectionDict: LoadDict = {
       other: { otherNested: 'HelloObjDestructurableParams', moreNested: 'HelloNestedLocateDepsColliding' }
     },
   },
+  'HelloLocateNestedArrayDeps': {
+    constructible: Hello,
+    deps: {
+      some: { nested: data2 }
+    },
+    locateDeps: {
+      other: ['Hey'],
+    },
+  },
   'emptyObject': {
     instance: {},
   },
