@@ -16,21 +16,39 @@ export type SubscriptionsDict = {
 
 export type GetInstanceType<C> = C extends new(...args: any[]) => infer T ? T : never;
 export type GetInjectableSubclass<T> = T extends InjectableInterface ? T : never;
-export type AfterCallbackProps<T> = { me: T, serviceLocator: DiContainer, el: LoadDictElement<T>, deps: DependenciesDict };
-export type BeforeCallbackProps<T> = { serviceLocator: DiContainer, el: LoadDictElement<T>, deps: DependenciesDict };
+export type AfterCallbackProps<T, D = DependenciesDict> = { me: T, serviceLocator: DiContainer, el: LoadDictElement<T>, deps: D };
+export type BeforeCallbackProps<T, D = DependenciesDict> = { serviceLocator: DiContainer, el: LoadDictElement<T>, deps: D };
 
-export type LoadDictElement<T = any> = {
-  constructible?: new(...args: any[]) => T;
-  instance?: T;
-  injectable?: GetInjectableSubclass<T>; 
-  deps?: DependenciesDict,
-  destructureDeps?: boolean;
-  locateDeps?: LocatableNestedDependenciesDict,
-  after?: (props: AfterCallbackProps<T>) => (T | void | Promise<T | void>);
-  before?: (props: BeforeCallbackProps<T>) => (DependenciesDict | void | Promise<DependenciesDict | void>);
-  factory?: (...args: any[]) => T;
-  subscriptions?: SubscriptionsDict;
-}
+export type ConstructibleProp<T> = { constructible: new(...args: any[]) => T; }
+export type InstanceProp<T> = { instance: T; }
+export type InjectableProp<T> = { injectable: GetInjectableSubclass<T>; }
+export type FactoryProp<T> = { factory: (...args: any[]) => T; }
+
+type LdePropsUnion<T> = {}
+  & ConstructibleProp<T>
+  & InstanceProp<T>
+  & InjectableProp<T>
+  & FactoryProp<T>
+
+type LdeXOR<T, K extends keyof LdePropsUnion<T>> = Pick<LdePropsUnion<T>, K> & Omit<Partial<LdePropsUnion<T>>, K>
+
+type Common<T, D = DependenciesDict, BD = Partial<D>> = {}
+  & { deps?: D, }
+  & { destructureDeps?: boolean; }
+  & { locateDeps?: LocatableNestedDependenciesDict; }
+  & { after?: (props: AfterCallbackProps<T, D>) => (T | void | Promise<T | void>); }
+  & { before?: (props: BeforeCallbackProps<T, BD>) => (D | void | Promise<D | void>); }
+  & { subscriptions?: SubscriptionsDict; }
+
+export type LoadDictElement<T = any, D = DependenciesDict, BD = Partial<D>> = {}
+  & (
+    LdeXOR<T, "constructible">
+    | LdeXOR<T, "instance">
+    | LdeXOR<T, "injectable">
+    | LdeXOR<T, "factory">
+  )
+  & Common<T, D, BD>
+
 
 export type LoadDict = {
   [P: string]: LoadDictElement
