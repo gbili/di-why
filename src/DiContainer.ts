@@ -62,6 +62,10 @@ export type ServiceLocatorDict = {
   [k: string]: any;
 }
 
+export type LocatableServicesDict = {
+  [k: string]: string;
+}
+
 export type DependenciesDict = ServiceLocatorDict;
 
 export type LocatableNestedDependenciesDict = {

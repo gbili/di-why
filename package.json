@@ -1,6 +1,6 @@
 {
   "name": "di-why",
-  "version": "v0.15.11",
+  "version": "v0.15.12",
   "description": "A diy Dependency Injection Container and service locator",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
@@ -10,9 +10,7 @@
     "coverage:report": "nyc report --reporter=text-lcov > coverage.lcov",
     "coverage:report:upload": "CODECOV_TOKEN=\"$(grep \"CODECOV_TOKEN=\" .env | cut -d'=' -f2)\" codecov",
     "coverage": "npm run coverage:generate && npm run coverage:check && npm run coverage:report && npm run coverage:report:upload",
-    "test": "mocha --recursive ./build/test",
-    "develop": "nodemon ./build/src/index.js",
-    "serve": "NODE_ENV=production node ./build/src/index.js"
+    "test": "mocha --recursive ./build/test"
   },
   "config": {
     "ghooks": {
@@ -48,9 +46,7 @@
     "codecov": "^3.5.0",
     "dotenv": "^8.0.0",
     "ghooks": "^2.0.4",
-    "marked": "0.8.0",
-    "mocha": "^8.4.0",
-    "nodemon": "2.0.4",
+    "mocha": "^10.2.0",
     "nyc": "^15.1.0",
     "saylo": "^0.5.0"
   },
