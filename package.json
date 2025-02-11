@@ -1,15 +1,10 @@
 {
   "name": "di-why",
-  "version": "v0.15.12",
+  "version": "v0.15.13",
   "description": "A diy Dependency Injection Container and service locator",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "scripts": {
-    "coverage:generate": "nyc npm run test",
-    "coverage:check": "nyc check-coverage --lines 70 --branches 70 --statements 70 --functions 70",
-    "coverage:report": "nyc report --reporter=text-lcov > coverage.lcov",
-    "coverage:report:upload": "CODECOV_TOKEN=\"$(grep \"CODECOV_TOKEN=\" .env | cut -d'=' -f2)\" codecov",
-    "coverage": "npm run coverage:generate && npm run coverage:check && npm run coverage:report && npm run coverage:report:upload",
     "test": "mocha --recursive ./build/test"
   },
   "config": {
@@ -38,17 +33,14 @@
   },
   "homepage": "https://github.com/gbili/di-why#readme",
   "devDependencies": {
-    "@types/chai": "4.2.9",
-    "@types/chai-as-promised": "7.1.2",
-    "@types/mocha": "7.0.1",
-    "chai": "4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "codecov": "^3.5.0",
-    "dotenv": "^8.0.0",
-    "ghooks": "^2.0.4",
-    "mocha": "^10.2.0",
-    "nyc": "^15.1.0",
-    "saylo": "^0.5.0"
+    "@types/chai": "5.0.1",
+    "@types/chai-as-promised": "8.0.1",
+    "@types/mocha": "10.0.10",
+    "chai": "5.1.2",
+    "chai-as-promised": "^8.0.1",
+    "dotenv": "^16.4.7",
+    "mocha": "^11.1.0",
+    "saylo": "^0.5.1"
   },
   "directories": {
     "test": "test"

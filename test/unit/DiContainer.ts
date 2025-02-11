@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import { logger } from 'saylo';
 import chaiAsPromised from 'chai-as-promised';
 import DiContainer, { LoadDict, AfterCallbackProps, GetInstanceType, BeforeCallbackProps } from '../../src/DiContainer';
+import { mergeObjects } from '../../src/utils/mergeObjects';
 
 chai.use(chaiAsPromised);
 logger.turnOn('debug');
@@ -153,7 +154,7 @@ const injectionDict: LoadDict = {
     instance: logger,
     after: async ({ serviceLocator }: AfterCallbackProps<typeof logger>) => {
       const data = await serviceLocator.get('data');
-      serviceLocator.set('emptyObject', data);
+      serviceLocator.setLoaded('emptyObject', data);
     },
   },
   'HelloStaticInjectable': {
@@ -203,7 +204,6 @@ describe(`DiContainer`, function() {
 
   describe(`DiContainer.mergeObjects(a, b)`, function() {
     it('should return an object with both merged (no collision)', function() {
-      const di = new DiContainer({ logger });
       const o1 = {
         a1: {
           a2a: '-a2a'
@@ -228,7 +228,7 @@ describe(`DiContainer`, function() {
         c1: '_c1',
         d1: '-d1',
       };
-      expect(di.mergeObjects(o1, o2)).to.be.deep.equal(expected);
+      expect(mergeObjects(o1, o2)).to.be.deep.equal(expected);
     });
   });
 
@@ -236,26 +236,26 @@ describe(`DiContainer`, function() {
     it('should be able to add more refs for loading', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
       di.addToLoadDict(injectionDict2)
-      expect(di.has('HelloAddedAfterwards')).to.be.equal(false);
+      expect(di.hasLoaded('HelloAddedAfterwards')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('HelloAddedAfterwards')).to.be.equal(true);
+      expect(di.hasLoaded('HelloAddedAfterwards')).to.be.equal(true);
     });
   });
 
   describe(`di.loadAll()`, function() {
     it('should be able to load :instance', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('Hello')).to.be.equal(false);
+      expect(di.hasLoaded('Hello')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('Hello')).to.be.equal(true);
+      expect(di.hasLoaded('Hello')).to.be.equal(true);
     });
 
     it('should be able to load :instance and execute after', async function() {
       afterWasExecuted = false;
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('data')).to.be.equal(false);
+      expect(di.hasLoaded('data')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('data')).to.be.equal(true);
+      expect(di.hasLoaded('data')).to.be.equal(true);
       expect(afterWasExecuted).to.be.equal(true);
     });
 
@@ -270,13 +270,13 @@ describe(`DiContainer`, function() {
       };
       const di = new DiContainer({ logger, load: injDict });
       await di.loadAll();
-      expect(di.has('WillBeReplaced')).to.be.equal(true);
+      expect(di.hasLoaded('WillBeReplaced')).to.be.equal(true);
       expect(await di.get('WillBeReplaced')).to.be.equal('ReplacedByThis');
     });
 
     it('should be able to load :instance and give access to serviceLocator in after callback', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('emptyObject')).to.be.equal(false);
+      expect(di.hasLoaded('emptyObject')).to.be.equal(false);
       await di.loadAll();
       const eo = await di.get('emptyObject');
       expect(eo).to.be.equal(data);
@@ -284,26 +284,26 @@ describe(`DiContainer`, function() {
 
     it('should be able to load :injectable', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('HelloStaticInjectable')).to.be.equal(false);
+      expect(di.hasLoaded('HelloStaticInjectable')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('HelloStaticInjectable')).to.be.equal(true);
+      expect(di.hasLoaded('HelloStaticInjectable')).to.be.equal(true);
       expect(Hello.getInjection().d).to.be.equal('d');
     });
 
     it('should be able to load :constructible', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('HelloConstructible')).to.be.equal(false);
+      expect(di.hasLoaded('HelloConstructible')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('HelloConstructible')).to.be.equal(true);
+      expect(di.hasLoaded('HelloConstructible')).to.be.equal(true);
       const e = (await di.get('HelloConstructible')).injection.e;
       expect(e).to.be.equal('e');
     });
 
     it('should be able to load :constructible with destructurable params', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('HelloObjDestructurableParams')).to.be.equal(false);
+      expect(di.hasLoaded('HelloObjDestructurableParams')).to.be.equal(false);
       await di.loadAll();
-      expect(di.has('HelloObjDestructurableParams')).to.be.equal(true);
+      expect(di.hasLoaded('HelloObjDestructurableParams')).to.be.equal(true);
       const aaa = await di.get('HelloObjDestructurableParams');
       expect(aaa.param1).to.be.equal(data2.a);
       expect(aaa.param2).to.be.equal(data2.b);
@@ -387,7 +387,7 @@ describe(`DiContainer`, function() {
     it('should be able to get an async loaded entry', async function() {
       afterWasExecuted = false;
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('data')).to.be.equal(false);
+      expect(di.hasLoaded('data')).to.be.equal(false);
       await di.loadAll();
       expect(await di.get('data')).to.be.equal(data);
       expect(afterWasExecuted).to.be.equal(true);
@@ -395,13 +395,13 @@ describe(`DiContainer`, function() {
   });
 
 
-  describe(`di.set()`, function() {
+  describe(`di.setLoaded()`, function() {
     it('should be able to set a non existent entry', async function() {
       const di = new DiContainer({ logger, load: injectionDict });
-      expect(di.has('data')).to.be.equal(false);
+      expect(di.hasLoaded('data')).to.be.equal(false);
       const key = 'nonExistent';
       const value = 'nonExistentValue';
-      di.set(key, value);
+      di.setLoaded(key, value);
       expect(await di.get(key)).to.be.equal(value);
     });
 
@@ -409,9 +409,9 @@ describe(`DiContainer`, function() {
       const di = new DiContainer({ logger, load: injectionDict });
       await di.loadAll();
       const key = 'data';
-      expect(di.has(key)).to.be.equal(true);
+      expect(di.hasLoaded(key)).to.be.equal(true);
       const value = 'new value';
-      di.set(key, value);
+      di.setLoaded(key, value);
       expect(await di.get(key)).to.be.equal(value);
     });
   });
