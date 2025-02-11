@@ -1,6 +1,6 @@
 {
   "name": "di-why",
-  "version": "v0.15.13",
+  "version": "v0.16.0",
   "description": "A diy Dependency Injection Container and service locator",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
