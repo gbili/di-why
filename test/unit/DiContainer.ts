@@ -7,7 +7,6 @@ import DiContainer, { LoadDict, AfterCallbackProps, GetInstanceType, BeforeCallb
 import { mergeObjects } from '../../src/utils/mergeObjects';
 
 chai.use(chaiAsPromised);
-logger.turnOn('debug');
 
 class Hello {
   public injection: any;

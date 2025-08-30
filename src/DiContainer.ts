@@ -19,17 +19,8 @@ export type SubscriptionsDict = {
 
 export type GetInstanceType<C> = C extends new(...args: any[]) => infer T ? T : never;
 export type GetInjectableSubclass<T> = T extends InjectableInterface ? T : never;
-export type AfterCallbackProps<T, D = DependenciesDict> = {
-  me: T;
-  serviceLocator: DiContainer;
-  el: LoadDictElement<T>;
-  deps: D;
-};
-export type BeforeCallbackProps<T, D = DependenciesDict> = {
-  serviceLocator: DiContainer;
-  el: LoadDictElement<T>;
-  deps: D;
-};
+export type AfterCallbackProps<T, D = DependenciesDict> = { me: T, serviceLocator: DiContainer, el: LoadDictElement<T>, deps: D };
+export type BeforeCallbackProps<T, D = DependenciesDict> = { serviceLocator: DiContainer, el: LoadDictElement<T>, deps: D };
 
 export type ConstructibleProp<T> = { constructible: new(...args: any[]) => T; }
 export type InstanceProp<T> = { instance: T; }
